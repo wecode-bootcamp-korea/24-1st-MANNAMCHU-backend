@@ -1,5 +1,4 @@
 from django.db import models
-from users import models
 
 class Product(models.Model):
     name        = models.CharField(max_length=100)
@@ -15,7 +14,6 @@ class Product(models.Model):
 class Option(models.Model):
     option           = models.CharField(max_length=100)
     additional_price = models.DecimalField(max_digits=18, decimal_places=2)
-    quantity         = models.IntegerField()
     product          = models.ForeignKey('Product', on_delete=models.CASCADE)
 
     class Meta:
@@ -28,17 +26,18 @@ class Image(models.Model):
         db_table = 'urls'
 
 class Tag(models.Model):
-    tag_new  = models.BooleanField()
-    tag_sale = models.BooleanField()
-    tag_best = models.BooleanField()
+    new  = models.BooleanField()
+    sale = models.BooleanField()
+    best = models.BooleanField()
 
     class Meta:
         db_talbe = 'tags'
 
 class Cart(models.Model):
-    user    = models.ForeignKey('User', on_delete=models.CASCADE)
-    product = models.ForeignKey('Product', on_delete=models.CASCADE)
-    option  = models.ForeignKey('Option', on_delete=models.CASCADE)
+    user     = models.ForeignKey('User', on_delete=models.CASCADE)
+    product  = models.ForeignKey('Product', on_delete=models.CASCADE)
+    option   = models.ForeignKey('Option', on_delete=models.CASCADE)
+    quantity = models.IntegerField()
 
     class Meta:
         db_table = 'carts'

@@ -1,5 +1,4 @@
 from django.db import models
-from products import models
 
 class User(models.Model):
     name     = models.CharField(max_length=45)

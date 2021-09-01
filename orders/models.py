@@ -1,6 +1,4 @@
 from django.db import models
-from products import models
-from users import models
 
 class Order(models.Model):
     user         = models.ForeignKey('User', on_delete=models.CASCADE)
@@ -17,7 +15,7 @@ class OrderStatus(models.Model):
     status = models.CharField(max_length=100)
 
     class Meta:
-        db_table = 'orders_status'
+        db_table = 'order_status'
 
 class OrderedItem(models.Model):
     product     = models.ForeignKey('Product', on_delete=models.CASCADE)
@@ -32,4 +30,4 @@ class OrderedItemStatus(models.Model):
     status = models.CharField(max_length=100)
 
     class Meta:
-        db_table = 'ordered_items_status'
+        db_table = 'ordered_item_status'
