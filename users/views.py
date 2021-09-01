@@ -11,10 +11,10 @@ from django.db.utils import DataError
 from users.models import User
 
 class SignUp(View):
-    def post(request,body):
-        data            = json.loads(request.body)
-        password_format = re.compile('\w+[@]\w+[.]\w+')
-        email_format    = re.compile('^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$')
+    def post(self ,request):
+        data = json.loads(request.body)
+        email_format       = re.compile('\w+[@]\w+[.]\w+')
+        password_format    = re.compile('^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$')
 
         try:
             if not email_format.search(data['email']):
@@ -45,7 +45,7 @@ class SignUp(View):
             return JsonResponse({"message" : "TOO_LONG"}, status=400)
 
 class SignIn(View):
-    def post(request,body):
+    def post(self, request):
         data = json.loads(request.body)
         try:
             if not User.objects.filter(email=data['email']).exists():
@@ -53,7 +53,7 @@ class SignIn(View):
             
             user = User.objects.get(email=data['email'])
 
-            if not bcrypt.checkpw(user.password.encode('utf-8'),data['password'].encode('utf-8')):
+            if not bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
                 return JsonResponse({"mesaage" : "INVALID_USER"}, status=401)
             
             token = jwt.encode({"user_id" : user.id}, SECRET_KEY, algorithm='HS256')
