@@ -12,7 +12,7 @@ class User(models.Model):
 
 class WishList(models.Model):
     user    = models.ForeignKey('User', on_delete=models.CASCADE)
-    product = models.ForeignKey('Product', on_delete=models.CASCADE)
+    product = models.ForeignKey('products.Product', on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'wishlist'
