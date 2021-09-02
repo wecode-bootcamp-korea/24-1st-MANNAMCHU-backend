@@ -2,7 +2,6 @@ from django.db import models
 
 class Order(models.Model):
     user         = models.ForeignKey('users.User', on_delete=models.CASCADE)
-    product      = models.ForeignKey('products.Product', on_delete=models.CASCADE)
     option       = models.ForeignKey('products.Option', on_delete=models.CASCADE)
     address      = models.CharField(max_length=500)
     memo         = models.CharField(max_length=300)
@@ -18,7 +17,7 @@ class OrderStatus(models.Model):
         db_table = 'order_status'
 
 class OrderedItem(models.Model):
-    product     = models.ForeignKey('products.Product', on_delete=models.CASCADE)
+    option     = models.ForeignKey('products.Option', on_delete=models.CASCADE)
     quantity    = models.IntegerField()
     order       = models.ForeignKey('Order', on_delete=models.CASCADE)
     item_status = models.ForeignKey('OrderedItemStatus', on_delete=models.CASCADE)
