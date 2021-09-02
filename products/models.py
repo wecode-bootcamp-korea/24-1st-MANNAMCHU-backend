@@ -16,8 +16,7 @@ class Option(models.Model):
     option           = models.CharField(max_length=100)
     additional_price = models.DecimalField(max_digits=18, decimal_places=2)
     product          = models.ForeignKey('Product', on_delete=models.CASCADE)
-    quantity         = models.IntegerField()
-
+    
     class Meta:
         db_table = 'options'
 
@@ -39,6 +38,7 @@ class Tag(models.Model):
 class Cart(models.Model):
     user     = models.ForeignKey('users.User', on_delete=models.CASCADE)
     option   = models.ForeignKey('products.Option', on_delete=models.CASCADE)
+    quantity = models.IntegerField()
 
     class Meta:
         db_table = 'carts'

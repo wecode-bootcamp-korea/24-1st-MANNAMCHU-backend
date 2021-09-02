@@ -30,3 +30,4 @@ class OrderedItemStatus(models.Model):
 
     class Meta:
         db_table = 'ordered_item_status'
+
