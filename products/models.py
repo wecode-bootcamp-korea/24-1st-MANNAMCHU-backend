@@ -31,12 +31,12 @@ class Tag(models.Model):
     best = models.BooleanField()
 
     class Meta:
-        db_talbe = 'tags'
+        db_table = 'tags'
 
 class Cart(models.Model):
-    user     = models.ForeignKey('User', on_delete=models.CASCADE)
-    product  = models.ForeignKey('Product', on_delete=models.CASCADE)
-    option   = models.ForeignKey('Option', on_delete=models.CASCADE)
+    user     = models.ForeignKey('users.User', on_delete=models.CASCADE)
+    product  = models.ForeignKey('products.Product', on_delete=models.CASCADE)
+    option   = models.ForeignKey('products.Option', on_delete=models.CASCADE)
     quantity = models.IntegerField()
 
     class Meta:

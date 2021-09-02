@@ -14,7 +14,7 @@ class SignUp(View):
     def post(self ,request):
         data = json.loads(request.body)
         email_format       = re.compile('\w+[@]\w+[.]\w+')
-        password_format    = re.compile('^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,}$')
+        password_format    = re.compile('^(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[!@#$%^&*])[a-zA-Z0-9!@#$%^&*]{8,20}$')
 
         try:
             if not email_format.search(data['email']):
@@ -54,7 +54,7 @@ class SignIn(View):
             user = User.objects.get(email=data['email'])
 
             if not bcrypt.checkpw(data['password'].encode('utf-8'), user.password.encode('utf-8')):
-                return JsonResponse({"mesaage" : "INVALID_USER"}, status=401)
+                return JsonResponse({"mesaage" : "INVALID_PASSWORD"}, status=401)
             
             token = jwt.encode({"user_id" : user.id}, SECRET_KEY, algorithm='HS256')
 
