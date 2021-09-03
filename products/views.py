@@ -10,12 +10,12 @@ from products.models import Product, Option, Image, Tag, Cart
 
 class DetailView(View):
     def get(self, request):
-        product_id = request.GET.get('product-id')
+        product_id     = request.GET.get('product-id')
         product_detail = Product.objects.get(id=product_id)
 
         def getting_images():
             image_list = product_detail.image_set.filter(product_id=product_detail.id).values('id', 'url')
-            image_set = []
+            image_set  = []
             for image in image_list:
                 image_set.append({
                     'id' : image['id'],
@@ -25,7 +25,7 @@ class DetailView(View):
         
         def getting_options():
             option_list = product_detail.option_set.filter(product_id=product_detail.id).values('id', 'option', 'additional_price')
-            option_set = []
+            option_set  = []
             for option in option_list:
                 option_set.append({
                     'id'              : option['id'],
