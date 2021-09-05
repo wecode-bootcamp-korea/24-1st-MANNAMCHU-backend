@@ -2,31 +2,23 @@ from django.views import View
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 
-
-from products.models import Product
-
+from products.models import Product, Image, ProductTag, Tag
 
 class ProductListView(View):
     def get(self, request):
         try:
             page     = request.GET.get('page')
-            products = Product.objects.all().order_by('id')
-            result   = []
-                
-            for product in products:
-                result.append({
+            products = Product.objects.all().order_by('-id')
+            sale     = Tag.objects.get(name='sale')
+            result   = [{
                     'name'       : product.name,
                     'price'      : product.price,
-                    'discount'   : product.discount,
-                    'image'      : list(product.image_set.filter(product_id=product.id).values('url')),
-                    'tag'        : [{
-                        'new'        : product.tag.new,
-                        'sale'       : product.tag.sale,
-                        'best'       : product.tag.best
-                    }],
+                    'discount'   : ProductTag.objects.get(product_id=product.id, tag_id=sale.id).sale_rate,
+                    'image'      : Image.objects.filter(product_id=product.id).values('url'),
+                    'tag'        : product.tags.values('name'),
                     'like_count' : product.like_count
-                })
-            
+                } for product in products]
+
             paginator = Paginator(result, 24)
             
             if paginator.num_pages < int(page):
@@ -42,22 +34,19 @@ class ProductNewView(View):
     def get(self, request):
         try:
             page     = request.GET.get('page')        
-            products = Product.objects.all()
-            result   = []
-            for product in products:
-                if product.tag.new:
-                    result.append({
+            products = Product.objects.all().order_by('-id')
+            sale     = Tag.objects.get(name='sale')
+            new      = Tag.objects.get(name='new')
+
+            result   = [{
                         'name'       : product.name,
                         'price'      : product.price,
-                        'discount'   : product.discount,
-                        'image'      : list(product.image_set.filter(product_id=product.id).values('url')),
-                        'tag'        : [{
-                            'new'        : product.tag.new,
-                            'sale'       : product.tag.sale,
-                            'best'       : product.tag.best,
-                        }],
+                        'discount'   : ProductTag.objects.get(product_id=product.id, tag_id=sale.id).sale_rate,
+                        'image'      : Image.objects.filter(product_id=product.id).values('url'),
+                        'tag'        : list(product.tag.value('name')),
                         'like_count' : product.like_count
-                    })
+                    } for product in products if ProductTag.objects.filter(product_id=product.id, tag_id=new.id).exists()]
+
             paginator = Paginator(result, 24)
 
             if paginator.num_pages < int(page):
@@ -74,22 +63,19 @@ class ProductBestView(View):
     def get(self, request):
         try:
             page     = request.GET.get('page')
-            products = Product.objects.all()
-            result   = []
-            for product in products:
-                if product.tag.best:
-                    result.append({
+            products = Product.objects.all().order_by('-id')
+            sale     = Tag.objects.get(name='sale')
+            best     = Tag.objects.get(name='best')
+
+            result   = [{
                         'name'       : product.name,
                         'price'      : product.price,
-                        'discount'   : product.discount,
-                        'image'      : list(product.image_set.filter(product_id=product.id).values('url')),
-                        'tag'        : [{
-                            'new'        : product.tag.new,
-                            'sale'       : product.tag.sale,
-                            'best'       : product.tag.best,
-                        }],
+                        'discount'   : ProductTag.objects.get(product_id=product.id, tag_id=sale.id).sale_rate,
+                        'image'      : Image.objects.filter(product_id=product.id).values('url'),
+                        'tag'        : list(product.tag.value('name')),
                         'like_count' : product.like_count
-                    })
+                    } for product in products if ProductTag.objects.filter(product_id=product.id, tag_id=best.id).exists()]
+            
             paginator = Paginator(result, 24)
 
             if paginator.num_pages < int(page):
@@ -106,21 +92,17 @@ class ProductSaleView(View):
         try:
             page     = request.GET.get('page')
             products = Product.objects.all()
-            result   = []
-            for product in products:
-                if product.tag.sale:
-                    result.append({
+            sale     = Tag.objects.get(name='sale')
+            
+            result   = [{
                         'name'       : product.name,
                         'price'      : product.price,
-                        'discount'   : product.discount,
-                        'image'      : list(product.image_set.filter(product_id=product.id).values('url')),
-                        'tag'        : [{
-                            'new'        : product.tag.new,
-                            'sale'       : product.tag.sale,
-                            'best'       : product.tag.best,
-                        }],
+                        'discount'   : ProductTag.objects.get(product_id=product.id, tag_id=sale.id).sale_rate,
+                        'image'      : Image.objects.filter(product_id=product.id).values('url'),
+                        'tag'        : list(product.tag.value('name')),
                         'like_count' : product.like_count
-                    })
+                    } for product in products if ProductTag.objects.filter(product_id=product.id, tag_id=sale.id).exists()]
+
             paginator = Paginator(result, 24)
 
             if paginator.num_pages < int(page):
@@ -131,5 +113,3 @@ class ProductSaleView(View):
             return JsonResponse({"sale_products" : posts.object_list}, status=200)
         except ValueError:
             return JsonResponse({"message" : "PAGE NOT FOUND"}, status=404)
-
-            
