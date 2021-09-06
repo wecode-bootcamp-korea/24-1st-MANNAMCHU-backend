@@ -37,20 +37,3 @@ class ProductListView(View):
             return JsonResponse({"message" : "DATA NOT FOUND"}, status=400)
         except Tag.DoesNotExist:
             return JsonResponse({"message" : "TAG DOES NOT EXISTS"}, status=400)
-
-class CartView(View):
-    @login_decorator
-    def get(self, request):
-        user = request.user
-        carts = Cart.objects.filter(user_id=user.id)
-
-        result = [{
-            'product'  : cart.option.product.name,
-            'price' : cart.option.product.price,
-            'option': cart.option.option,
-            'addtional_price' : cart.option.addtional_price,
-            'quantity' : cart.quantity,
-            'image' : cart.option.product.image_set.values('url'),
-            'sale_rate' : cart.option.product.producttag_set.values('sale_rate'),
-        }for cart in carts]
-        return JsonResponse({"message" : result}, status=200)
