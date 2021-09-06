@@ -3,3 +3,5 @@ from django.urls import path
 
 urlpatterns = [
     path('/detail', DetailView.as_view()),
+]
+
