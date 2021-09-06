@@ -1,115 +1,47 @@
-from django.views import View
-from django.http import JsonResponse
+from django.views          import View
+from django.http           import JsonResponse
 from django.core.paginator import Paginator
 
-from products.models import Product, Image, ProductTag, Tag
+from users.login_decorator import login_decorator
+from products.models       import Product, Image, ProductTag, Tag, Cart
 
 class ProductListView(View):
     def get(self, request):
         try:
-            page     = request.GET.get('page')
-            products = Product.objects.all().order_by('-id')
+            page      = request.GET.get('page', 1)
+            tag       = request.GET.get('tag')
+            page      = int(page or 1)
+            page_size = 1
+            limit     = page_size * page 
+            offset    = limit - page_size
+            
             sale     = Tag.objects.get(name='sale')
+            best     = Tag.objects.get(name='best')
+            new      = Tag.objects.get(name='new')
+
+            if not tag:
+                products = Product.objects.all().order_by('-id') [offset:limit]
+        
+            elif str(tag) =='sale':
+                products = Product.objects.filter(tags=sale.id).order_by('-id') [offset:limit]
+            elif str(tag) =='new':
+                products = Product.objects.filter(tags=new.id).order_by('-id') [offset:limit]
+            elif str(tag) =='best':
+                products = Product.objects.filter(tags=best.id).order_by('-id') [offset:limit]
+
+            if not products:
+                return JsonResponse({"message" : "PAGE NOT FOUND"}, status=404)
+                    
             result   = [{
                     'name'       : product.name,
                     'price'      : product.price,
-                    'discount'   : ProductTag.objects.get(product_id=product.id, tag_id=sale.id).sale_rate,
-                    'image'      : Image.objects.filter(product_id=product.id).values('url'),
-                    'tag'        : product.tags.values('name'),
+                    'discount'   : list(ProductTag.objects.filter(product_id=product.id, tag_id=sale.id).values('sale_rate')), # 문제 : 
+                    'image'      : list(Image.objects.filter(product_id=product.id).values('url')),
+                    'tag'        : list(product.tags.values('name')),
                     'like_count' : product.like_count
                 } for product in products]
-
-            paginator = Paginator(result, 24)
-            
-            if paginator.num_pages < int(page):
-                return JsonResponse({"message" : "OUT OF RANGE"}, status=404)
-
-            posts     = paginator.get_page(page)
-
-            return JsonResponse({'products': posts.object_list}, status=200)
-        except ValueError:
-            return JsonResponse({"message" : "PAGE NOT FOUND"}, status=404)
-
-class ProductNewView(View):
-    def get(self, request):
-        try:
-            page     = request.GET.get('page')        
-            products = Product.objects.all().order_by('-id')
-            sale     = Tag.objects.get(name='sale')
-            new      = Tag.objects.get(name='new')
-
-            result   = [{
-                        'name'       : product.name,
-                        'price'      : product.price,
-                        'discount'   : ProductTag.objects.get(product_id=product.id, tag_id=sale.id).sale_rate,
-                        'image'      : Image.objects.filter(product_id=product.id).values('url'),
-                        'tag'        : list(product.tag.value('name')),
-                        'like_count' : product.like_count
-                    } for product in products if ProductTag.objects.filter(product_id=product.id, tag_id=new.id).exists()]
-
-            paginator = Paginator(result, 24)
-
-            if paginator.num_pages < int(page):
-                return JsonResponse({"message" : "OUT OF RANGE"}, status=404)
-
-            posts = paginator.get_page(page)
-
-            return JsonResponse({"new_products" : posts.object_list}, status=200)
-        except ValueError:
-            return JsonResponse({"message" : "PAGE NOT FOUND"}, status=404)
-
-
-class ProductBestView(View):
-    def get(self, request):
-        try:
-            page     = request.GET.get('page')
-            products = Product.objects.all().order_by('-id')
-            sale     = Tag.objects.get(name='sale')
-            best     = Tag.objects.get(name='best')
-
-            result   = [{
-                        'name'       : product.name,
-                        'price'      : product.price,
-                        'discount'   : ProductTag.objects.get(product_id=product.id, tag_id=sale.id).sale_rate,
-                        'image'      : Image.objects.filter(product_id=product.id).values('url'),
-                        'tag'        : list(product.tag.value('name')),
-                        'like_count' : product.like_count
-                    } for product in products if ProductTag.objects.filter(product_id=product.id, tag_id=best.id).exists()]
-            
-            paginator = Paginator(result, 24)
-
-            if paginator.num_pages < int(page):
-                return JsonResponse({"message" : "OUT OF RANGE"}, status=404)
-
-            posts = paginator.get_page(page)
-
-            return JsonResponse({"best_products" : posts.object_list}, status=200)
-        except ValueError:
-            return JsonResponse({"message" : "PAGE NOT FOUND"}, status=404)
-
-class ProductSaleView(View):
-    def get(self, request):
-        try:
-            page     = request.GET.get('page')
-            products = Product.objects.all()
-            sale     = Tag.objects.get(name='sale')
-            
-            result   = [{
-                        'name'       : product.name,
-                        'price'      : product.price,
-                        'discount'   : ProductTag.objects.get(product_id=product.id, tag_id=sale.id).sale_rate,
-                        'image'      : Image.objects.filter(product_id=product.id).values('url'),
-                        'tag'        : list(product.tag.value('name')),
-                        'like_count' : product.like_count
-                    } for product in products if ProductTag.objects.filter(product_id=product.id, tag_id=sale.id).exists()]
-
-            paginator = Paginator(result, 24)
-
-            if paginator.num_pages < int(page):
-                return JsonResponse({"message" : "OUT OF RANGE"}, status=404)
-
-            posts = paginator.get_page(page)
-
-            return JsonResponse({"sale_products" : posts.object_list}, status=200)
-        except ValueError:
-            return JsonResponse({"message" : "PAGE NOT FOUND"}, status=404)
+            return JsonResponse({'products': result, 'page' : page }, status=200)
+        except Product.DoesNotExist:
+            return JsonResponse({"message" : "DATA NOT FOUND"}, status=400)
+        except UnboundLocalError:
+            return JsonResponse({"message" : "TAG DOES NOT EXISTS"}, status=400)
