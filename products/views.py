@@ -1,8 +1,12 @@
-from django.views          import View
-from django.http           import JsonResponse
+import json
+
+from django.views           import View
+from django.http            import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
 
-from products.models       import Product, Option, Image, ProductTag, Tag, Cart
+from users.login_decorator  import login_decorator
+from products.models        import Product, Option, Image, ProductTag, Tag, Cart
+from users.models           import User
 
 class ProductListView(View):
     def get(self, request):
@@ -68,3 +72,40 @@ class DetailView(View):
             return JsonResponse({'product_detail': result})
         except ObjectDoesNotExist:
             return JsonResponse({'message': 'PRODUCT_NOT_EXIST'}, status=404)
+
+class CartView(View):
+    @login_decorator
+    def get(self, request):
+        user  = request.user
+        carts = Cart.objects.filter(user_id=user.id)
+        sale  = Tag.objects.get(name='sale')
+
+        result = [{
+            'product'         : cart.option.product.name,
+            'price'           : cart.option.product.price,
+            'option'          : cart.option.option,
+            'addtional_price' : cart.option.additional_price,
+            'quantity'        : cart.quantity,
+            'image'           : Image.objects.filter(product_id = cart.option.product.id).first().url,
+            'sale_rate'       : [discount.sale_rate for discount in ProductTag.objects.filter(product_id=cart.option.product.id, tag_id=sale.id)],
+        }for cart in carts]
+        
+        return JsonResponse({"message" : result}, status=200)
+
+    @login_decorator
+    def patch(self, request):
+        user = request.user
+        try:
+            data = json.loads(request.body)
+
+            if not data['quantity']:
+                return JsonResponse({"message" : "QUANTITY_ERROR"}, status=400)
+            
+            Cart.objects.filter(option_id=data['option_id'], user_id=user.id).update(quantity=data['quantity'])
+            
+            if not Cart.objects.filter(option_id=data['option_id'], user_id=user.id).exists():
+                return JsonResponse({"message" : "CART DOES NOT EXISTS"}, status=400)
+
+            return JsonResponse({"message" : "SUCCESS"}, status=200)
+        except KeyError:
+            return JsonResponse({"message" : "KEY_ERROR"})
