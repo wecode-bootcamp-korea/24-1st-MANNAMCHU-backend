@@ -58,10 +58,10 @@ class CartView(View):
                 option.save()
                 return JsonResponse({'message': 'ALREADY_IN_YOUR_CART, MORE_ADDED'}, status=201)
 
-            Cart.objects.create(
-                user_id   = data['user_id'],
-                option_id = data['option_id'],
-                quantity  = data['quantity'])
+            [Cart.objects.create(
+                user_id   = datum['user_id'],
+                option_id = datum['option_id'],
+                quantity  = datum['quantity']) for datum in data]
             return JsonResponse({'message': 'ADDED_ITEM_INTO_YOUR_CART'}, status=201)
         
         except KeyError:
