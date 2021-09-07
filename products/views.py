@@ -1,4 +1,5 @@
 import json
+from django.db.models import expressions
 
 from django.views           import View
 from django.http            import JsonResponse
@@ -76,22 +77,32 @@ class DetailView(View):
 class CartView(View):
     @login_decorator
     def get(self, request):
-        user  = request.user
-        carts = Cart.objects.filter(user_id=user.id)
-        sale  = Tag.objects.get(name='sale')
+        try:
+            user  = request.user
+            user = User.objects.get(id=1)
+            carts = Cart.objects.filter(user_id=user.id)
+            sale  = Tag.objects.get(name='sale')
 
-        result = [{
-            'product'         : cart.option.product.name,
-            'price'           : cart.option.product.price,
-            'option'          : cart.option.option,
-            'addtional_price' : cart.option.additional_price,
-            'quantity'        : cart.quantity,
-            'image'           : Image.objects.filter(product_id = cart.option.product.id).first().url,
-            'sale_rate'       : [discount.sale_rate for discount in ProductTag.objects.filter(product_id=cart.option.product.id, tag_id=sale.id)],
-        }for cart in carts]
+            result = [{
+                'product'         : cart.option.product.name,
+                'price'           : cart.option.product.price,
+                'option'          : cart.option.option,
+                'addtional_price' : cart.option.additional_price,
+                'quantity'        : cart.quantity,
+                'image'           : Image.objects.filter(product_id = cart.option.product.id).first().url,
+                'sale_rate'       : [discount.sale_rate for discount in ProductTag.objects.filter(product_id=cart.option.product.id, tag_id=sale.id)],
+            }for cart in carts]
+            
+            return JsonResponse({"message" : result}, status=200)
+        except Cart.DoesNotExist:
+            return JsonResponse({"message" : "CART_DATA_ERROR"}, status=400)
+        except Tag.DoesNotExist:
+            return JsonResponse({"message" : "TAG_DATA_ERROR"}, status=400)
+        except Option.DoesNotExist:
+            return JsonResponse({"message" : "OPTION_DATA_ERROR"}, status=400)
+        except Product.DoesNotExist:
+            return JsonResponse({"message" : "PRODUCT_DATA_ERROR"}, status=400)            
         
-        return JsonResponse({"message" : result}, status=200)
-
     @login_decorator
     def patch(self, request):
         user = request.user
