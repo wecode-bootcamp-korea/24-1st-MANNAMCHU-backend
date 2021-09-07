@@ -1,11 +1,8 @@
-import json
-
 from django.views          import View
 from django.http           import JsonResponse
-from django.core.paginator import Paginator
+from django.core.exceptions import ObjectDoesNotExist
 
-from users.login_decorator import login_decorator
-from products.models       import Product, Image, ProductTag, Tag, Cart
+from products.models       import Product, Option, Image, ProductTag, Tag, Cart
 
 class ProductListView(View):
     def get(self, request):
@@ -40,28 +37,34 @@ class ProductListView(View):
         except Tag.DoesNotExist:
             return JsonResponse({"message" : "TAG DOES NOT EXISTS"}, status=400)
 
-class CartView(View):
-    @login_decorator
+class DetailView(View):
     def get(self, request):
-        user = request.user
-        carts = Cart.objects.filter(user_id=user.id)
+        try:
+            product_id     = request.GET.get('id')
+            product_detail = Product.objects.get(id=product_id)
 
-        result = [{
-            'product'  : cart.option.product.name,
-            'price' : cart.option.product.price,
-            'option': cart.option.option,
-            'addtional_price' : cart.option.addtional_price,
-            'quantity' : cart.quantity,
-            'image' : cart.option.product.image_set.values('url'),
-            'sale_rate' : cart.option.product.producttag_set.values('sale_rate'),
-        }for cart in carts]
-        return JsonResponse({"message" : result}, status=200)
+            image_list  = Image.objects.filter(product_id=product_id).values('id', 'url')
+            option_list = Option.objects.filter(product_id=product_id).values('id', 'option', 'additional_price')
+            tag_list    = ProductTag.objects.filter(product_id=product_id).values('product_id','sale_rate', 'tag_id')
 
-    @login_decorator
-    def patch(self, request):
-        user = request.user
-        data = json.loads(request.body)
-
-        cart = Cart.objects.get
-        return JsonResponse({"message" : "SUCCESS"}, status=200)
-
+            result = {
+                'name'        : product_detail.name,
+                'price'       : product_detail.price,
+                'like_count'  : product_detail.like_count,
+                'description' : product_detail.description,
+                'origin'      : product_detail.origin,
+                'options'     : [({
+                    'id'               : option['id'],
+                    'option'           : option['option'],
+                    'additional_price' : option['additional_price']}) for option in option_list],
+                'image'       : [({
+                    'id' : image['id'],
+                    'url': image['url']}) for image in image_list],
+                'tag' : [({
+                    'product_id' : tag['product_id'],
+                    'sale_rate'  : tag['sale_rate'],
+                    'tag_id'     : Tag.objects.get(id=tag['tag_id']).name}) for tag in tag_list],
+            }
+            return JsonResponse({'product_detail': result})
+        except ObjectDoesNotExist:
+            return JsonResponse({'message': 'PRODUCT_NOT_EXIST'}, status=404)
