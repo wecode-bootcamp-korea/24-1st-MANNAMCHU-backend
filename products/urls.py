@@ -1,3 +1,4 @@
+from products.views import DetailView
 from django.urls import path
 
 from products.views import ProductListView, DetailView
