@@ -6,8 +6,41 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.utils import DataError
 
 from products.models import Product, Option, Image, ProductTag, Tag, Cart
-from users.models import User
+from users.login_decorator import Login_decorator
 
+
+class ProductListView(View):
+    def get(self, request):
+        page       = request.GET.get('page', 1)
+        tag        = request.GET.get('tag')
+        page       = int(page or 1)
+        page_size  = 24
+        limit      = page_size * page 
+        offset     = limit - page_size
+        sale       = Tag.objects.get(name='sale')
+        try:
+            if not tag:
+                products   = Product.objects.all().order_by('-id') [offset:limit]
+            else:
+                tag_object = Tag.objects.get(name=tag)
+                products   = Product.objects.filter(tags=tag_object.id).order_by('-id') [offset:limit]
+            
+            if not products:
+                return JsonResponse({"message" : "PAGE NOT FOUND"}, status=404)
+            
+            result   = [{
+                    'name'       : product.name,
+                    'price'      : product.price,
+                    'discount'   : [discount.sale_rate for discount in ProductTag.objects.filter(product_id=product.id, tag_id=sale.id)], 
+                    'image'      : [url.url for url in Image.objects.filter(product_id=product.id)],                           
+                    'tag'        : [tag.name for tag in product.tags.all()],
+                    'like_count' : product.like_count
+                } for product in products]
+            return JsonResponse({'products': result, 'page' : page }, status=200)
+        except Product.DoesNotExist:
+            return JsonResponse({"message" : "DATA NOT FOUND"}, status=400)
+        except Tag.DoesNotExist:
+            return JsonResponse({"message" : "TAG DOES NOT EXISTS"}, status=400)
 
 class DetailView(View):
     def get(self, request):
@@ -40,29 +73,26 @@ class DetailView(View):
             return JsonResponse({'product_detail': result})
         except ObjectDoesNotExist:
             return JsonResponse({'message': 'PRODUCT_NOT_EXIST'}, status=404)
-            
 
 class CartView(View):
+    @Login_decorator
     def post(self, request):
         data = json.loads(request.body)
+        user = request.user
         
         try:
-            if not User.objects.filter(id=data['user_id']).exists():
-                return JsonResponse({'message': 'INVALID_USER'}, status=401)
-            if not Option.objects.filter(id=data['option_id']).exists():
-                return JsonResponse({'message': 'INVALID_OPTION'}, status=400)
-
-            if Cart.objects.filter(user_id=data['user_id'], option_id=data['option_id']).exists():
-                option = Cart.objects.get(option_id=data['option_id'])
-                option.quantity += int(data['quantity'])
-                option.save()
-                return JsonResponse({'message': 'ALREADY_IN_YOUR_CART, MORE_ADDED'}, status=201)
-
-            [Cart.objects.create(
-                user_id   = datum['user_id'],
-                option_id = datum['option_id'],
-                quantity  = datum['quantity']) for datum in data]
-            return JsonResponse({'message': 'ADDED_ITEM_INTO_YOUR_CART'}, status=201)
+            for datum in data:
+                if Cart.objects.filter(user_id=user.id, option_id=datum['option_id']):
+                    option = Cart.objects.get(option_id=datum['option_id'])
+                    option.quantity += int(datum['quantity'])
+                    option.save()
+                else:
+                    Cart.objects.update_or_create(
+                        user_id   = user.id,
+                        option_id = datum['option_id'],
+                        quantity  = datum['quantity']
+                        )
+            return JsonResponse({'message': 'ADDED_ITEM_INTO_YOUR_CART'},  status=201)
         
         except KeyError:
             return JsonResponse({'message': 'KEY_ERROR'}, status=400)
@@ -70,7 +100,8 @@ class CartView(View):
             return JsonResponse({'message': 'VALUE_ERROR'}, status=400)
         except DataError:
             return JsonResponse({'message': 'TOO_BIG_NUMBER'}, status=400)
-
+            
+    @Login_decorator
     def delete(self, request):
         product_id = request.GET.get('option_id')
 
@@ -81,4 +112,3 @@ class CartView(View):
         
         except ObjectDoesNotExist:
             return JsonResponse({'message': 'ITEM_DOES_NOT_EXIST'}, status=400)
-
