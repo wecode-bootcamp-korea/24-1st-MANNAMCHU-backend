@@ -79,7 +79,11 @@ class CartView(View):
     def get(self, request):
         try:
             user  = request.user
-            user = User.objects.get(id=1)
+            user  = User.objects.get(id=1)
+            
+            if not Cart.objects.filter(user_id=user.id).exists():
+                return JsonResponse({"message" : "CART EMPTY"}, status=200)
+
             carts = Cart.objects.filter(user_id=user.id)
             sale  = Tag.objects.get(name='sale')
 
