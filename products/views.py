@@ -86,6 +86,7 @@ class CartView(View):
             result = [{
                 'product'         : cart.option.product.name,
                 'price'           : cart.option.product.price,
+                'option_id'       : cart.option.id,
                 'option'          : cart.option.option,
                 'addtional_price' : cart.option.additional_price,
                 'quantity'        : cart.quantity,
@@ -120,3 +121,4 @@ class CartView(View):
             return JsonResponse({"message" : "SUCCESS"}, status=200)
         except KeyError:
             return JsonResponse({"message" : "KEY_ERROR"})
+    
