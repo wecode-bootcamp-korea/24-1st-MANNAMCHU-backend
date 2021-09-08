@@ -104,21 +104,3 @@ class CartView(View):
         except Product.DoesNotExist:
             return JsonResponse({"message" : "PRODUCT_DATA_ERROR"}, status=400)            
         
-    @login_decorator
-    def patch(self, request):
-        user = request.user
-        try:
-            data = json.loads(request.body)
-
-            if not data['quantity']:
-                return JsonResponse({"message" : "QUANTITY_ERROR"}, status=400)
-            
-            Cart.objects.filter(option_id=data['option_id'], user_id=user.id).update(quantity=data['quantity'])
-            
-            if not Cart.objects.filter(option_id=data['option_id'], user_id=user.id).exists():
-                return JsonResponse({"message" : "CART DOES NOT EXISTS"}, status=400)
-
-            return JsonResponse({"message" : "SUCCESS"}, status=200)
-        except KeyError:
-            return JsonResponse({"message" : "KEY_ERROR"})
-    
