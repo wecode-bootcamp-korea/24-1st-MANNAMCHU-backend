@@ -1,13 +1,46 @@
 import json
-from django.db.models import expressions
 
 from django.views           import View
 from django.http            import JsonResponse
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.utils import DataError
 
 from users.login_decorator  import login_decorator
 from products.models        import Product, Option, Image, ProductTag, Tag, Cart
-from users.models           import User
+
+
+class ProductListView(View):
+    def get(self, request):
+        page       = request.GET.get('page', 1)
+        tag        = request.GET.get('tag')
+        page       = int(page or 1)
+        page_size  = 24
+        limit      = page_size * page 
+        offset     = limit - page_size
+        sale       = Tag.objects.get(name='sale')
+        try:
+            if not tag:
+                products   = Product.objects.all().order_by('-id') [offset:limit]
+            else:
+                tag_object = Tag.objects.get(name=tag)
+                products   = Product.objects.filter(tags=tag_object.id).order_by('-id') [offset:limit]
+            
+            if not products:
+                return JsonResponse({"message" : "PAGE NOT FOUND"}, status=404)
+            
+            result   = [{
+                    'name'       : product.name,
+                    'price'      : product.price,
+                    'discount'   : [discount.sale_rate for discount in ProductTag.objects.filter(product_id=product.id, tag_id=sale.id)], 
+                    'image'      : [url.url for url in Image.objects.filter(product_id=product.id)],                           
+                    'tag'        : [tag.name for tag in product.tags.all()],
+                    'like_count' : product.like_count
+                } for product in products]
+            return JsonResponse({'products': result, 'page' : page }, status=200)
+        except Product.DoesNotExist:
+            return JsonResponse({"message" : "DATA NOT FOUND"}, status=400)
+        except Tag.DoesNotExist:
+            return JsonResponse({"message" : "TAG DOES NOT EXISTS"}, status=400)
 
 class ProductListView(View):
     def get(self, request):
@@ -76,10 +109,42 @@ class DetailView(View):
 
 class CartView(View):
     @login_decorator
+    def post(self, request):
+        data = json.loads(request.body)
+        user = request.user
+        
+        try:
+            for datum in data:
+                obj, created = Cart.objects.update_or_create(
+                    user_id   = user.id,
+                    option_id = datum['option_id'],
+                    defaults={'quantity': datum['quantity']}
+                    )
+            return JsonResponse({'message': 'ADDED_ITEM_INTO_YOUR_CART'},  status=201)
+        
+        except KeyError:
+            return JsonResponse({'message': 'KEY_ERROR'}, status=400)
+        except ValueError:
+            return JsonResponse({'message': 'VALUE_ERROR'}, status=400)
+        except DataError:
+            return JsonResponse({'message': 'TOO_BIG_NUMBER'}, status=400)
+            
+    @login_decorator
+    def delete(self, request):
+        product_id = request.GET.get('option_id')
+
+        try:
+            target_item = Cart.objects.get(option_id=product_id)
+            target_item.delete()
+            return JsonResponse({'message': 'ITEM_DELETED'}, status=200)
+        
+        except ObjectDoesNotExist:
+            return JsonResponse({'message': 'ITEM_DOES_NOT_EXIST'}, status=400)
+
+    @login_decorator
     def get(self, request):
         try:
             user  = request.user
-            user  = User.objects.get(id=1)
             
             if not Cart.objects.filter(user_id=user.id).exists():
                 return JsonResponse({"message" : "CART EMPTY"}, status=200)
